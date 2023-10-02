@@ -90,4 +90,12 @@ function initApp() {
     shuffleEl.addEventListener("contextmenu", event => { reset(); event.preventDefault(); });
 }
 
+//service worker 
+        // Register service worker
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js");
+            });
+        }
+
 initApp();
