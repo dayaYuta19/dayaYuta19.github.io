@@ -1,3 +1,12 @@
+//Historique pour archivr les meilleures moments pour faire du kiteSurf Pas encore fait
+
+/*************** *
+*
+* information pour la PWA déploiemnt : disponible à cette adresse gitHUB: dayaYuta19.github.io
+*
+*
+**************/
+
 // Fonction pour convertir km/h en nœuds
 function convertKmHToKnots(kmh) {
     return kmh / 1.85; // Conversion basée sur 1 nœud = 1,85 km/h
