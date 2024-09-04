@@ -1,9 +1,14 @@
-//Historique pour archivr les meilleures moments pour faire du kiteSurf Pas encore fait
+/*
+ * Auteur: Riffert Diana
+ * Projet: KiteSurf
+ * Description: KitSurf Guide pour faire du KitSurf
+ * File: js/main.js
+*/
 
 /*************** *
 *
 * information pour la PWA déploiemnt : disponible à cette adresse gitHUB: dayaYuta19.github.io
-*
+* Déploiement en app natif cordova pas encore fait 
 *
 **************/
 
@@ -33,7 +38,62 @@ function getKiteSize(weight) {
     return null; // Poids non pris en charge
 }
 
-// Condition pour faire du kiteSurf
+
+function verifyKiteCondition(weight, windSpeedKmH, windDirection) {
+    const windSpeedKnots = convertKmHToKnots(windSpeedKmH); // Conversion km/h en nœuds
+    const sizes = getKiteSize(weight);
+    
+    if (!sizes) {
+        return false;
+    }
+
+    // Vérification de la direction du vent (off-shore)
+    if (windDirection >= 0 && windDirection <= 180) {
+        return false;
+    }
+
+    // Vérification des plages de vent pour chaque taille de voile
+    for (let i = 0; i < sizes.length; i++) {
+        const size = sizes[i];
+        let minWind, maxWind;
+        if (size === 9) {
+            minWind = 16; maxWind = 22;
+        } else if (size === 10) {
+            minWind = 14; maxWind = 20;
+        } else if (size === 11) {
+            minWind = 14; maxWind = 20;
+        } else if (size === 12) {
+            minWind = 12; maxWind = 18;
+        } else if (size === 13) {
+            minWind = 12; maxWind = 18;
+        } else if (size === 14) {
+            minWind = 10; maxWind = 16;
+        } else if (size === 15) {
+            minWind = 8; maxWind = 14;
+        } else {
+            return "Pas de plage de vent définie pour cette taille de voile.";
+        }
+
+        // Si le vent est dans la plage idéale
+        if (windSpeedKnots >= minWind && windSpeedKnots <= maxWind) {
+            return true;
+        }
+        // Si le vent est trop faible
+        if (windSpeedKnots < minWind) {
+            return false;
+        }
+        // Si le vent est trop fort
+        if (windSpeedKnots > maxWind) {
+            return false;
+        }
+    }
+
+    // Si aucune condition n'est remplie
+    return "Conditions de vent non adaptées.";
+}
+
+
+// Condition pour faire du kiteSurf et envoie d'un message préventif à l'utilisateur 
 function getKiteConditions(weight, windSpeedKmH, windDirection) {
     const windSpeedKnots = convertKmHToKnots(windSpeedKmH); // Conversion km/h en nœuds
     const sizes = getKiteSize(weight);
@@ -83,9 +143,9 @@ function getKiteConditions(weight, windSpeedKmH, windDirection) {
         }
     }
 
-    // Si aucune condition n'est remplie
     return "Conditions de vent non adaptées.";
 }
+
 
 // Affiche le résultat pour l'utilisateur
 function calculateKiteSize() {
@@ -104,20 +164,53 @@ function calculateKiteSize() {
     });
 }
 
+
+//Ajoute Dans Local Storage Meteo (valueKN/h et wind direction et creation_time(date))
+function AjouteDansLocalStorageMeteo(meteoData) {
+    let lsStr = localStorage.getItem("meteoData");
+    let ls = JSON.parse(lsStr);
+
+    if (ls === null)
+        ls = [];
+
+    let notInList = true;
+
+    for (let i = 0; i < ls.length; i++)
+    {
+        let event = ls[i];
+        if (meteoData["date"] == event["date"])
+        {
+            notInList = false;
+            break;
+        }
+    }
+
+    if (notInList)
+        ls.push(meteoData);
+    
+    localStorage.setItem('meteoData', JSON.stringify(ls));
+ }
+
+
 // Récupère les données météo depuis l'API
 async function fetchMeteoData() {
     try {
         const response = await fetch("https://data.geo.admin.ch/ch.meteoschweiz.messwerte-windgeschwindigkeit-kmh-10min/ch.meteoschweiz.messwerte-windgeschwindigkeit-kmh-10min_en.json");
         const data = await response.json();
+        console.log(data);
         const features = data.features;
         
         for (let i = 0; i < features.length; i++) {
             let feature = features[i];
             if (feature.id === "GVE") { // Station de Genève Cointrin
-                return {
+                 
+                const meteoData = {
+                    date: data["creation_time"], // Date de l'information
                     value: feature.properties.value, // Vitesse du vent
                     wind_direction: feature.properties.wind_direction, // Direction du vent
                 };
+                console.log(meteoData);
+                return meteoData; // Retourne les données météo trouvées
             }
         }
     } catch (error) {
@@ -125,6 +218,7 @@ async function fetchMeteoData() {
     }
     return { value: 0, wind_direction: 0 }; // Valeurs par défaut en cas d'erreur
 }
+
 
 // Affiche les données météo à l'utilisateur
 function showMeteo(meteoData) {
@@ -145,23 +239,86 @@ function showMeteo(meteoData) {
     }
 }
 
+
+/**
+ * Fonction pour obtenir les données météo depuis l'API et les stocker
+ */
+async function fetchEtStockMeteo() {
+    fetchMeteoData()
+        .then(meteo => {
+            AjouteDansLocalStorageMeteo(meteo); // Stocke les nouvelles données dans le localStorage
+            console.log("Données météo mises à jour.");
+            showMeteo(meteo); // Affiche les nouvelles données
+            return meteo;
+        })
+        .catch(err => console.error("Erreur lors de la récupération des données depuis l'API : " + err));
+}
+
 // Initialisation des données météo
 function initializeMeteo() {
-    fetchMeteoData().then(meteoData => {
+    fetchEtStockMeteo().then(meteoData => {
         showMeteo(meteoData);
     });
 }
 
+
 // Rafraîchit les données météo toutes les 10 minutes (600 000 ms)
 function refreshMeteoData() {
-    fetchMeteoData().then(meteoData => {
+    fetchEtStockMeteo().then(meteoData => {
         showMeteo(meteoData);
     });
     setInterval(refreshMeteoData, 600000); // 10 minutes
 }
 
+
 // Initialiser les données météo lorsque le DOM est prêt
 document.addEventListener('DOMContentLoaded', () => {
     initializeMeteo();
     refreshMeteoData(); // Démarre le rafraîchissement des données
+
+    let events = [];
+    let ls = localStorage.getItem("meteoData");
+
+    const weightInput = document.getElementById('weightInput');
+    const weight = parseFloat(weightInput.value);
+
+    if (ls !== null && weight !== null)
+    {//permettra d'afficher la date dans la case du calendrier ou c'est possible de faire du kite surf
+        ls = JSON.parse(ls); 
+        for (let i = 0; i < ls.length; i++)
+        {
+            let event = ls[i];
+            // !verifyKiteCondition(weight, event["value"], event["wind_direction"]) permettra d'afficher les moment pas adéquoit au kite
+            if (verifyKiteCondition(weight, event["value"], event["wind_direction"]))//permet d'afficher les moment bon pour faire du kite 
+            {
+                let dateStr = event["date"];
+                let date = new Date(dateStr);
+
+                // Gestion de la date dans les cases du calendrier
+                const year = date. getFullYear();
+                const day = String(date. getMonth() + 1). padStart(2, '0');
+                const month = String(date. getDate()). padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, "0"); 
+                const minutes = String(date.getMinutes()).padStart(2, "0"); 
+                console.log(`${year}-${month}-${day}T${hours}:${minutes}`);
+                Date.parse();
+
+                // Format pour afficher les événements dans le calendrier
+                events[i] = {
+                    "title": "kitesurf",
+                    "start": `${year}-${month}-${day}T${hours}:${minutes}`
+                }
+            }
+        }
+        console.log(events);
+    }
+
+    //permet d'afficher un calendrier avec la librairie Calendar 
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: events
+    });
+
+    calendar.render();
 });
