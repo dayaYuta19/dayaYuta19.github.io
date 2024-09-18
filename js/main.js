@@ -292,21 +292,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (verifyKiteCondition(weight, event["value"], event["wind_direction"]))//permet d'afficher les moment bon pour faire du kite 
             {
                 let dateStr = event["date"];
-                let date = new Date(dateStr);
+                console.log(dateStr)
 
-                // Gestion de la date dans les cases du calendrier
-                const year = date. getFullYear();
-                const day = String(date. getMonth() + 1). padStart(2, '0');
-                const month = String(date. getDate()). padStart(2, '0');
-                const hours = String(date.getHours()).padStart(2, "0"); 
-                const minutes = String(date.getMinutes()).padStart(2, "0"); 
-                console.log(`${year}-${month}-${day}T${hours}:${minutes}`);
-                Date.parse();
+                const dateTime = dateStr.split(" ");
+                const date = dateTime[0].split(".");
+                const year = date[2];
+                const month = date[1];
+                const day = date[0];
+                console.log(`${year}-${month}-${day}T${dateTime[1]}`)
 
                 // Format pour afficher les événements dans le calendrier
                 events[i] = {
                     "title": "kitesurf",
-                    "start": `${year}-${month}-${day}T${hours}:${minutes}`
+                    "start": `${year}-${month}-${day}T${dateTime[1]}`
                 }
             }
         }
